@@ -30,7 +30,7 @@ Free Telegram alert ~15–30 min before it rains in Brno, with a radar snapshot 
 - **Why deduplicate by past observation, not by state file**: no race conditions, no need for GH Actions cache. If past 30 min was dry AND next 45 min has a wet 15-min block → alert. Naturally fires once per rain event.
 - **Why Rain Viewer, not ČHMÚ INCA**: ČHMÚ INCA is CC BY-NC-**ND** — no derivatives, so we can't legally crop it. Rain Viewer's free tier explicitly allows compositing/cropping; attribution is in the photo caption.
 - **Why OSM base + Rain Viewer overlay, composited in Python**: Telegram can't render a live map; we have to send a static image. Doing the composite ourselves is ~150 lines of Pillow code, no third-party service, no API keys.
-- **Why zoom 7, 2×2 tiles, 512 px crop**: Rain Viewer free tier max is zoom 7, 512 px tiles. One tile ≈ 200 km at Brno's latitude. 2×2 = ~400 km, cropped to 512 px ≈ 200 km square centered on Brno.
+- **Why zoom 7, 2×2 tiles, 384 px crop**: Rain Viewer free tier max is zoom 7, 512 px tiles. One tile ≈ 200 km at Brno's latitude. 2×2 = ~400 km, cropped to 384 px ≈ 150 km square centered on Brno — similar framing to ČHMÚ INCA (roughly Tábor–Hodonín east-west, Olomouc–Mikulov north-south).
 - **Why `sendPhoto` with fallback to `sendMessage`**: if Rain Viewer or OSM tile servers blip, we still want the text alert delivered. Caption carries the same payload as the old message.
 - **Brno coordinates**: 49.1951 N, 16.6068 E (city centre).
 
@@ -51,7 +51,7 @@ Free Telegram alert ~15–30 min before it rains in Brno, with a radar snapshot 
 | ------------------ | ------- | ---------------------------------------------------- |
 | `ZOOM`             | 7       | Tile zoom level (Rain Viewer free tier max = 7)      |
 | `TILE_SIZE`        | 512     | Tile size in px                                       |
-| `CROP_SIZE`        | 512     | Output square size in px                             |
+| `CROP_SIZE`        | 384     | Output square size in px                             |
 | `RADAR_OPACITY`    | 0.75    | Radar overlay opacity, 0..1                          |
 | `COLOR_SCHEME`     | 2       | Rain Viewer palette (2 = Universal Blue)             |
 
