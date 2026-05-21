@@ -1,51 +1,57 @@
 # Brno Rain Bot
 
-Telegram alert ~15–30 min předtím, než v Brně začne pršet. Běží jako GitHub Actions cron (každých 15 min). Bez serveru, bez API klíče pro počasí, bez placených služeb.
+Telegram alert ~15–30 min předtím, než v Brně začne pršet, s radarovým snímkem Brna + okolí v příloze. Běží jako GitHub Actions cron (každých 15 min). Bez serveru, bez API klíče pro počasí ani radar, bez placených služeb.
 
 ## Jak to funguje
 
 1. Každých 15 min se spustí GitHub Actions workflow.
 2. Skript se zeptá [Open-Meteo](https://open-meteo.com/) na 15-minutový forecast srážek pro Brno.
-3. Pokud byly poslední ~30 min suché **a** v dalších ~45 min model čeká déšť → pošle ti zprávu na Telegram.
-4. Jinak nedělá nic.
+3. Pokud byly poslední ~30 min suché **a** v dalších ~45 min model čeká déšť → stáhne z [Rain Viewer](https://rainviewer.com/) aktuální radarové dlaždice, slepí je s mapou OSM, ořízne na Brno + okolí (~300 km) a pošle ti to jako foto na Telegram.
+4. Pokud radar selže (Rain Viewer výpadek, OSM ratelimit), pošle aspoň textovou zprávu — varování nikdy nepropadne.
+5. Jinak nedělá nic.
 
 ## První setup (jednorázově)
 
 ### 1. Vytvoř Telegram bota
 
-V Telegramu najdi **@BotFather** → `/newbot` → název → username (musí končit na `bot`) → dostaneš **TOKEN** ve tvaru `123456789:ABC-DEF...`.
+V Telegramu najdi **@BotFather** → `/newbot` → název → username (musí končit na `bot`) → dostaneš **TOKEN**.
 
 ### 2. Zjisti svoje chat ID
 
-- V Telegramu pošli novému botovi libovolnou zprávu (např. `/start`).
-- V prohlížeči otevři: `https://api.telegram.org/bot<TVUJ_TOKEN>/getUpdates`
-- V JSON odpovědi najdi `"chat":{"id": 123456789, ...}` — to je **CHAT_ID**.
+Nejrychleji: v Telegramu vyhledej `@userinfobot`, pošli `/start`, odpoví číslem — to je tvoje **CHAT_ID**.
 
 ### 3. Ulož tokeny do GitHub Secrets
 
-V repu: **Settings → Secrets and variables → Actions → New repository secret**, přidej dva:
+V repu: **Settings → Secrets and variables → Actions → New repository secret**:
 
-| Name                  | Value           |
-| --------------------- | --------------- |
+| Name                  | Value             |
+| --------------------- | ----------------- |
 | `TELEGRAM_BOT_TOKEN`  | token z BotFather |
-| `TELEGRAM_CHAT_ID`    | tvoje chat ID    |
+| `TELEGRAM_CHAT_ID`    | tvoje chat ID     |
 
 ### 4. Test
 
-V repu **Actions → Brno rain alert → Run workflow** — workflow běžne hned. V logu uvidíš buď `Skip — no rain in next 45 min.` nebo `Sent: ...`.
+V repu **Actions → Brno rain alert → Run workflow**. V logu uvidíš `Skip — no rain in next 45 min.` nebo `Sent photo + caption: ...`.
 
-Pro vyzkoušení doručení dočasně uprav v `check_rain.py`:
+Pro test doručení dočasně v `check_rain.py` nastav:
 ```python
-WET_MM_BLOCK = 0.0
+WET_MM_BLOCK  = 0.0
+DRY_MM_TOTAL  = 999
 ```
-spusť ručně, vrať na `0.1`.
+spusť ručně, vrať zpět.
 
 ## Ladění
 
-Všechny prahy jsou nahoře v `check_rain.py`. Detaily a designová rozhodnutí v `CLAUDE.md`.
+- Prahy alertu nahoře v `check_rain.py`.
+- Velikost / zoom / průhlednost radaru nahoře v `radar.py`.
+- Detaily v `CLAUDE.md`.
+
+## Atribuce (povinné dle licencí)
+
+V popisku každého foto je: *Weather data by Rain Viewer · © OpenStreetMap contributors*.
 
 ## Limity
 
-- GitHub Actions cron má jitter (typicky 5–15 min) — alert je tedy spíš `15–30 min předem`, ne přesně 30.
-- Pro public repo je Actions zdarma neomezeně, pro private 2000 min/měsíc (tady ~960 min/měsíc).
-- Open-Meteo: zdarma pro non-commercial.
+- GitHub Actions cron má jitter (typicky 5–15 min).
+- Public repo = Actions zdarma neomezeně; private = 2000 min/měsíc.
+- Rain Viewer a Open-Meteo free tier = non-commercial use.

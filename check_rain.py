@@ -1,11 +1,14 @@
 """Brno rain alert — checks Open-Meteo every 15 min, pings Telegram if rain
-expected within ~30–45 min and the last 30 min were dry."""
+expected within ~30–45 min and the last 30 min were dry. When alerting,
+attaches a Rain Viewer + OSM radar snapshot of Brno + okolí."""
 
 import os
 import sys
 import requests
 from datetime import datetime
 from zoneinfo import ZoneInfo
+
+from radar import make_brno_radar
 
 LAT, LON = 49.1951, 16.6068
 TZ = ZoneInfo("Europe/Prague")
@@ -78,10 +81,33 @@ msg = (
     f"První 15 min: ~{p:.1f} mm"
 )
 
-resp = requests.post(
-    f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-    json={"chat_id": CHAT_ID, "text": msg, "parse_mode": "Markdown"},
-    timeout=30,
-)
-resp.raise_for_status()
-print(f"Sent: {msg}")
+# Try sendPhoto with radar; fall back to sendMessage if radar fetch fails.
+try:
+    png, radar_ts = make_brno_radar()
+    radar_dt = datetime.fromtimestamp(radar_ts, TZ)
+    caption = (
+        msg
+        + f"\n\n_Radar: {radar_dt.strftime('%H:%M')} · "
+        "© OpenStreetMap · Weather data by Rain Viewer_"
+    )
+    resp = requests.post(
+        f"https://api.telegram.org/bot{TOKEN}/sendPhoto",
+        data={
+            "chat_id": CHAT_ID,
+            "caption": caption,
+            "parse_mode": "Markdown",
+        },
+        files={"photo": ("brno-radar.png", png, "image/png")},
+        timeout=60,
+    )
+    resp.raise_for_status()
+    print(f"Sent photo + caption: {msg.splitlines()[0]}")
+except Exception as e:
+    print(f"Radar fetch/send failed ({e!r}); falling back to text-only.")
+    resp = requests.post(
+        f"https://api.telegram.org/bot{TOKEN}/sendMessage",
+        json={"chat_id": CHAT_ID, "text": msg, "parse_mode": "Markdown"},
+        timeout=30,
+    )
+    resp.raise_for_status()
+    print(f"Sent: {msg}")
