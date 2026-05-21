@@ -13,8 +13,8 @@ TZ = ZoneInfo("Europe/Prague")
 # Tunable knobs
 LOOKAHEAD_MIN = 45    # search for first rainy 15-min block in next N minutes
 LOOKBACK_MIN  = 30    # last N minutes must be dry for alert to fire
-WET_MM_BLOCK  = 0.1   # 15-min block ≥ this many mm = "wet"
-DRY_MM_TOTAL  = 0.2   # total mm in lookback above this = "already raining"
+WET_MM_BLOCK  = 0.0   # 15-min block ≥ this many mm = "wet"
+DRY_MM_TOTAL  = 999   # total mm in lookback above this = "already raining"
 
 TOKEN   = os.environ["TELEGRAM_BOT_TOKEN"]
 CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
