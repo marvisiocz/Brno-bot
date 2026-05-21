@@ -2,7 +2,7 @@ name: Brno rain alert
 
 on:
   schedule:
-    - cron: "*/15 * * * *"   # every 15 min (UTC; jitter typical for GH Actions)
+    - cron: "7,22,37,52 * * * *"   # every 15 min off-peak (UTC; avoids 00/15/30/45 spike)
   workflow_dispatch:          # allow manual run from Actions tab
 
 concurrency:
