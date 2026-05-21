@@ -6,7 +6,7 @@ Telegram alert ~15–30 min předtím, než v Brně začne pršet, s radarovým 
 
 1. Každých 15 min se spustí GitHub Actions workflow.
 2. Skript se zeptá [Open-Meteo](https://open-meteo.com/) na 15-minutový forecast srážek pro Brno.
-3. Pokud byly poslední ~30 min suché **a** v dalších ~45 min model čeká déšť → stáhne z [Rain Viewer](https://rainviewer.com/) aktuální radarové dlaždice, slepí je s mapou OSM, ořízne na Brno + okolí (~300 km) a pošle ti to jako foto na Telegram.
+3. Pokud byly poslední ~30 min suché **a** v dalších ~45 min model čeká déšť → stáhne z [Rain Viewer](https://rainviewer.com/) aktuální radarové dlaždice, slepí je s mapou OSM, ořízne na Brno + okolí (~200 km) a pošle ti to jako foto na Telegram.
 4. Pokud radar selže (Rain Viewer výpadek, OSM ratelimit), pošle aspoň textovou zprávu — varování nikdy nepropadne.
 5. Jinak nedělá nic.
 
