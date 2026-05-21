@@ -11,7 +11,7 @@ from PIL import Image, ImageDraw
 LAT, LON = 49.1951, 16.6068        # Brno
 ZOOM = 7                            # Rain Viewer free tier max
 TILE_SIZE = 512                     # 512 px tiles, free tier supported
-CROP_SIZE = 768                     # final output in px (≈ 300 km square)
+CROP_SIZE = 512                     # final output in px (≈ 200 km square)
 RADAR_OPACITY = 0.75
 COLOR_SCHEME = 2                    # 2 = Universal Blue (RV default)
 SMOOTH = "1_1"                      # smooth=1, snow=1 (rain + snow tinted)
