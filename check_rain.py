@@ -18,8 +18,8 @@ TZ = ZoneInfo("Europe/Prague")
 # Tunable knobs
 LOOKAHEAD_MIN = 45    # search for first rainy 15-min block in next N minutes
 LOOKBACK_MIN  = 30    # window used to decide "it's raining now"
-WET_MM_BLOCK  = 0.0   # TEMP TEST (force alert) — revert to 0.1
-DRY_MM_TOTAL  = 0     # TEMP TEST (force alert) — revert to 0.2
+WET_MM_BLOCK  = 0.1   # 15-min block ≥ this many mm = "wet"
+DRY_MM_TOTAL  = 0.2   # total mm in lookback above this = "raining now"
 STATE_FILE    = "state.json"
 
 TOKEN   = os.environ["TELEGRAM_BOT_TOKEN"]
