@@ -1,10 +1,12 @@
 """Compose a static PNG of Brno + okolí: OpenStreetMap base + Rain Viewer radar overlay.
 
 Returns (png_bytes, frame_unix_timestamp) ready for Telegram sendPhoto.
+Resilient to transient Rain Viewer / OSM slowness via retries + longer timeouts.
 """
 
 import io
 import math
+import time
 import requests
 from PIL import Image, ImageDraw
 
@@ -16,6 +18,12 @@ RADAR_OPACITY = 0.75
 COLOR_SCHEME = 2                    # 2 = Universal Blue (RV default)
 SMOOTH = "1_1"                      # smooth=1, snow=1 (rain + snow tinted)
 USER_AGENT = "Brno-bot/1.0 (+https://github.com/marvisiocz/Brno-bot)"
+
+# Network resilience
+INDEX_TIMEOUT = 25                  # s, per attempt for the Rain Viewer index
+INDEX_ATTEMPTS = 3
+TILE_TIMEOUT = 20                   # s, per attempt for each tile
+TILE_ATTEMPTS = 2
 
 OSM_TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
 RAINVIEWER_INDEX = "https://api.rainviewer.com/public/weather-maps.json"
@@ -32,21 +40,39 @@ def _latlon_to_tile_xy(lat: float, lon: float, zoom: int) -> tuple[float, float]
     return x, y
 
 
-def _fetch_image(url: str, timeout: int = 20) -> Image.Image | None:
-    """Fetch a PNG; return RGBA Image, or None if 404 / empty / error."""
-    try:
-        r = requests.get(url, headers=_HEADERS, timeout=timeout)
-        if r.status_code != 200 or len(r.content) < 100:
-            return None
-        return Image.open(io.BytesIO(r.content)).convert("RGBA")
-    except Exception:
-        return None
+def _get_json(url: str) -> dict:
+    """GET JSON with retries + backoff. Raises if all attempts fail."""
+    last_err: Exception | None = None
+    for i in range(INDEX_ATTEMPTS):
+        try:
+            r = requests.get(url, headers=_HEADERS, timeout=INDEX_TIMEOUT)
+            r.raise_for_status()
+            return r.json()
+        except Exception as e:  # noqa: BLE001
+            last_err = e
+            if i < INDEX_ATTEMPTS - 1:
+                time.sleep(2 * (i + 1))  # 2s, 4s
+    raise last_err  # type: ignore[misc]
+
+
+def _fetch_image(url: str) -> Image.Image | None:
+    """Fetch a PNG with one retry; return RGBA Image, or None if 404/empty/error."""
+    for i in range(TILE_ATTEMPTS):
+        try:
+            r = requests.get(url, headers=_HEADERS, timeout=TILE_TIMEOUT)
+            if r.status_code != 200 or len(r.content) < 100:
+                return None  # 404 / empty — no point retrying
+            return Image.open(io.BytesIO(r.content)).convert("RGBA")
+        except Exception:  # noqa: BLE001
+            if i < TILE_ATTEMPTS - 1:
+                time.sleep(1)
+    return None
 
 
 def make_brno_radar() -> tuple[bytes, int]:
     """Return (png_bytes, frame_unix_timestamp) for current Brno+okolí radar."""
-    # 1) Latest radar frame metadata
-    idx = requests.get(RAINVIEWER_INDEX, headers=_HEADERS, timeout=15).json()
+    # 1) Latest radar frame metadata (retried)
+    idx = _get_json(RAINVIEWER_INDEX)
     frame = idx["radar"]["past"][-1]    # last observed (real) frame
     host = idx["host"]
     radar_tmpl = (
@@ -66,7 +92,6 @@ def make_brno_radar() -> tuple[bytes, int]:
         for dy in range(2):
             tx, ty = tx0 + dx, ty0 + dy
 
-            # OSM serves 256 px tiles; upscale to TILE_SIZE for clean compositing
             osm = _fetch_image(OSM_TILE_URL.format(z=ZOOM, x=tx, y=ty))
             if osm is not None:
                 if osm.size != (TILE_SIZE, TILE_SIZE):
