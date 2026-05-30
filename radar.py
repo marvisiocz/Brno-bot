@@ -23,7 +23,7 @@ USER_AGENT = "Brno-bot/1.0 (+https://github.com/marvisiocz/Brno-bot)"
 INDEX_TIMEOUT = 25                  # s, per attempt for the Rain Viewer index
 INDEX_ATTEMPTS = 3
 TILE_TIMEOUT = 20                   # s, per attempt for each tile
-TILE_ATTEMPTS = 2
+TILE_ATTEMPTS = 3
 
 OSM_TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
 RAINVIEWER_INDEX = "https://api.rainviewer.com/public/weather-maps.json"
