@@ -52,7 +52,7 @@ V popisku každého foto je: *Weather data by Rain Viewer · © OpenStreetMap co
 
 ## Přesnější časování (volitelně, přes cron-job.org)
 
-GitHub cron se opožďuje o 5–30 min. Když chceš, aby upozornění chodila včas, může
+GitHub cron se opožďuje a jede max 2x až 3x za den. Když chceš, aby upozornění chodila včas, může
 workflow v přesný čas spouštět bezplatná služba [cron-job.org](https://cron-job.org)
 přes GitHub API. Krok za krokem: [`NAVOD-cron-job-org.md`](NAVOD-cron-job-org.md).
 
