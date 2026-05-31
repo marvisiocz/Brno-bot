@@ -4,7 +4,7 @@ Free Telegram alert ~15–30 min before it rains in Brno, with a radar snapshot 
 
 ## Stack
 
-- **Cron**: GitHub Actions (`*/15 * * * *`)
+- **Cron**: GitHub Actions (`7,22,37,52 * * * *`), triggered on time by cron-job.org — GitHub's own scheduler is unreliable (often fires only a few times a day), see `NAVOD-cron-job-org.md`
 - **Forecast**: Open-Meteo `minutely_15` (free, no API key, ~1–2 km resolution via ICON-D2 for Central Europe)
 - **Radar**: Rain Viewer free public API + OpenStreetMap base tiles, composited locally with Pillow
 - **Delivery**: Telegram Bot API (`sendPhoto` with caption, fallback to `sendMessage` on radar failure)
@@ -16,6 +16,7 @@ Free Telegram alert ~15–30 min before it rains in Brno, with a radar snapshot 
 .
 ├── CLAUDE.md                       ← this file
 ├── README.md                       ← human setup steps
+├── NAVOD-cron-job-org.md           ← Czech guide: trigger on-time via cron-job.org
 ├── check_rain.py                   ← Open-Meteo logic + Telegram send
 ├── radar.py                        ← Rain Viewer + OSM compositor
 ├── requirements.txt                ← requests, Pillow
@@ -24,10 +25,10 @@ Free Telegram alert ~15–30 min before it rains in Brno, with a radar snapshot 
 
 ## Design decisions (so we don't re-argue them)
 
-- **Why GitHub Actions, not Cloudflare Workers / Render / Railway**: zero extra accounts, repo already on GitHub. Trade-off accepted = cron jitter (typically 5–15 min delay under GH load, occasionally more, very rarely a skipped run).
+- **Why GitHub Actions, not Cloudflare Workers / Render / Railway**: zero extra accounts, repo already on GitHub. Trade-off = GitHub's scheduled cron is unreliable (under load it often fires only a few times a day, not every 15 min). Fix without leaving GitHub: an external trigger (cron-job.org → `workflow_dispatch`) runs the workflow on time — documented in `NAVOD-cron-job-org.md`.
 - **Why 15-minute interval**: rain forecasts need fresh data. Tighter is wasteful and pushes against GH Actions cron precision.
 - **Why `minutely_15` endpoint**: hourly is too coarse for "alert 30 min before rain". Open-Meteo provides 15-min data for Central Europe from high-res models.
-- **Why deduplicate by past observation, not by state file**: no race conditions, no need for GH Actions cache. If past 30 min was dry AND next 45 min has a wet 15-min block → alert. Naturally fires once per rain event.
+- **Why deduplicate via `state.json` (persisted in the GH Actions cache)**: fire at most one alert per rain event. Past-observation logic (dry last 30 min + a wet 15-min block in the next 45 min) decides *whether* rain is happening/imminent; `state.json` then records the last-alert timestamp so we don't re-alert within the same event. The marker resets to 0 once the sky is genuinely clear (no rain now, none in the next 45 min), so the next event alerts fresh.
 - **Why Rain Viewer, not ČHMÚ INCA**: ČHMÚ INCA is CC BY-NC-**ND** — no derivatives, so we can't legally crop it. Rain Viewer's free tier explicitly allows compositing/cropping; attribution is in the photo caption.
 - **Why OSM base + Rain Viewer overlay, composited in Python**: Telegram can't render a live map; we have to send a static image. Doing the composite ourselves is ~150 lines of Pillow code, no third-party service, no API keys.
 - **Why zoom 7, 2×2 tiles, 384 px crop**: Rain Viewer free tier max is zoom 7, 512 px tiles. One tile ≈ 200 km at Brno's latitude. 2×2 = ~400 km, cropped to 384 px ≈ 150 km square centered on Brno — similar framing to ČHMÚ INCA (roughly Tábor–Hodonín east-west, Olomouc–Mikulov north-south).
@@ -57,7 +58,7 @@ Free Telegram alert ~15–30 min before it rains in Brno, with a radar snapshot 
 
 ## Known limitations
 
-- GH Actions scheduled workflows can be delayed under load — realistic lead time is 5–30 min.
+- GH Actions scheduled cron is unreliable under load (may fire only a few times a day) — drive it on time via cron-job.org (`NAVOD-cron-job-org.md`).
 - Precip models can "flicker" between runs — duplicate alerts are dampened by past-observation dedup, not 100% prevented.
 - Czech timezone hardcoded (`Europe/Prague`).
 - Rain Viewer free tier: no SLA. The `try/except` around radar gracefully falls back to text-only alert.
@@ -73,7 +74,7 @@ If this bot is ever pointed at a Marvisio-branded Telegram channel for commercia
 
 ## Future ideas (not done, document before implementing)
 
-- Cooldown via GitHub Actions cache (suppress duplicate alerts within N minutes)
+- Time-based cooldown on top of the per-event dedup (suppress repeats within N minutes even inside one long event)
 - Thunderstorm / hail / strong-wind alerts via `weathercode`
 - Animated radar (GIF of last hour from Rain Viewer past frames)
 - Multiple recipients via comma-separated `TELEGRAM_CHAT_ID`
