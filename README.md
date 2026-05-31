@@ -1,6 +1,6 @@
 # Brno Rain Bot
 
-Telegram alert ~15–30 min předtím, než v Brně začne pršet, s radarovým snímkem Brna + okolí v příloze. Běží jako GitHub Actions cron (každých 15 min). Bez serveru, bez API klíče pro počasí ani radar, bez placených služeb.
+Telegram alert ~15–30 min předtím, než v Brně začne pršet, s radarovým snímkem Brna + okolí v příloze. Běží jako GitHub Actions cron (použij cron-job, github actions automaticky funguje jen 2x-3x za den). Bez serveru, bez API klíče pro počasí ani radar, bez placených služeb.
 
 ## Jak to funguje
 
