@@ -50,6 +50,12 @@ spusť ručně, vrať zpět.
 
 V popisku každého foto je: *Weather data by Rain Viewer · © OpenStreetMap contributors*.
 
+## Přesnější časování (volitelně, přes cron-job.org)
+
+GitHub cron se opožďuje o 5–30 min. Když chceš, aby upozornění chodila včas, může
+workflow v přesný čas spouštět bezplatná služba [cron-job.org](https://cron-job.org)
+přes GitHub API. Krok za krokem: [`NAVOD-cron-job-org.md`](NAVOD-cron-job-org.md).
+
 ## Limity
 
 - GitHub Actions cron má jitter (typicky 5–15 min).
