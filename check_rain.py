@@ -22,8 +22,8 @@ WET_MM_BLOCK  = 0.1   # 15-min block ≥ this many mm = "wet"
 DRY_MM_TOTAL  = 0.2   # total mm in lookback above this = "raining now"
 STATE_FILE    = "state.json"
 
-TOKEN   = os.environ["TELEGRAM_BOT_TOKEN"]
-CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
+TOKEN    = os.environ["TELEGRAM_BOT_TOKEN"]
+CHAT_IDS = [c.strip() for c in os.environ["TELEGRAM_CHAT_ID"].split(",") if c.strip()]
 
 
 def load_state() -> dict:
@@ -129,25 +129,27 @@ try:
         + f"\n\n_Radar: {radar_dt.strftime('%H:%M')} · "
         "© OpenStreetMap · Weather data by Rain Viewer_"
     )
-    resp = requests.post(
-        f"https://api.telegram.org/bot{TOKEN}/sendPhoto",
-        data={"chat_id": CHAT_ID, "caption": caption, "parse_mode": "Markdown"},
-        files={"photo": ("brno-radar.png", png, "image/png")},
-        timeout=60,
-    )
-    resp.raise_for_status()
+    for cid in CHAT_IDS:
+        resp = requests.post(
+            f"https://api.telegram.org/bot{TOKEN}/sendPhoto",
+            data={"chat_id": cid, "caption": caption, "parse_mode": "Markdown"},
+            files={"photo": ("brno-radar.png", png, "image/png")},
+            timeout=60,
+        )
+        resp.raise_for_status()
     sent = True
-    print(f"Sent photo + caption: {msg.splitlines()[0]}")
+    print(f"Sent photo + caption to {len(CHAT_IDS)} chat(s): {msg.splitlines()[0]}")
 except Exception as e:  # noqa: BLE001
     print(f"Radar fetch/send failed ({e!r}); falling back to text-only.")
-    resp = requests.post(
-        f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-        json={"chat_id": CHAT_ID, "text": msg, "parse_mode": "Markdown"},
-        timeout=30,
-    )
-    resp.raise_for_status()
+    for cid in CHAT_IDS:
+        resp = requests.post(
+            f"https://api.telegram.org/bot{TOKEN}/sendMessage",
+            json={"chat_id": cid, "text": msg, "parse_mode": "Markdown"},
+            timeout=30,
+        )
+        resp.raise_for_status()
     sent = True
-    print(f"Sent: {msg}")
+    print(f"Sent to {len(CHAT_IDS)} chat(s): {msg}")
 
 # Only mark the event as alerted once something actually went out.
 if sent:
