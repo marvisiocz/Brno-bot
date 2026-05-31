@@ -154,14 +154,18 @@ for cid in CHAT_IDS:
             continue
         except Exception as e:  # noqa: BLE001
             print(f"Photo send to {cid} failed ({e!r}); falling back to text.")
-    resp = requests.post(
-        f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-        json={"chat_id": cid, "text": msg, "parse_mode": "Markdown"},
-        timeout=30,
-    )
-    resp.raise_for_status()
-    sent = True
-    print(f"Sent text to {cid}: {head}")
+    try:
+        resp = requests.post(
+            f"https://api.telegram.org/bot{TOKEN}/sendMessage",
+            json={"chat_id": cid, "text": msg, "parse_mode": "Markdown"},
+            timeout=30,
+        )
+        resp.raise_for_status()
+        sent = True
+        print(f"Sent text to {cid}: {head}")
+    except Exception as e:  # noqa: BLE001
+        print(f"Failed to notify {cid}: {e!r}")
+        continue
 
 # Only mark the event as alerted once something actually went out.
 if sent:
