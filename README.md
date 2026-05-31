@@ -58,6 +58,6 @@ přes GitHub API. Krok za krokem: [`NAVOD-cron-job-org.md`](NAVOD-cron-job-org.m
 
 ## Limity
 
-- GitHub Actions cron má jitter (typicky 5–15 min).
+- GitHub Actions cron má jitter (max 3x za den).
 - Public repo = Actions zdarma neomezeně; private = 2000 min/měsíc.
 - Rain Viewer a Open-Meteo free tier = non-commercial use.
