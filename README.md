@@ -27,7 +27,9 @@ V repu: **Settings → Secrets and variables → Actions → New repository secr
 | Name                  | Value             |
 | --------------------- | ----------------- |
 | `TELEGRAM_BOT_TOKEN`  | token z BotFather |
-| `TELEGRAM_CHAT_ID`    | tvoje chat ID     |
+| `TELEGRAM_CHAT_ID`    | tvoje chat ID (víc příjemců odděl čárkou, např. `123456789,987654321`) |
+
+> Bot pošle stejnou zprávu na všechna uvedená chat ID. Každý příjemce musí botovi nejdřív poslat `/start`, jinak mu Telegram nedovolí psát. Skupinové chaty mají ID záporné (`-100…`).
 
 ### 4. Test
 
