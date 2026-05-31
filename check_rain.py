@@ -42,6 +42,58 @@ def save_state(state: dict) -> None:
         print(f"Warning: could not save state: {e!r}")
 
 
+def send_to_all(png, msg: str, caption: str | None = None) -> bool:
+    """Deliver to every chat in CHAT_IDS, best-effort and per-recipient.
+
+    With a radar `png`, each chat gets its own sendPhoto attempt that falls back
+    to a text sendMessage on failure — so no one ever receives both photo and
+    text. With png=None everyone gets text only. A single undeliverable chat is
+    logged and skipped, never aborting the rest. Returns True if at least one
+    recipient was reached.
+    """
+    caption = caption if caption is not None else msg
+    sent = False
+    head = msg.splitlines()[0]
+    for cid in CHAT_IDS:
+        if png is not None:
+            try:
+                resp = requests.post(
+                    f"https://api.telegram.org/bot{TOKEN}/sendPhoto",
+                    data={"chat_id": cid, "caption": caption, "parse_mode": "Markdown"},
+                    files={"photo": ("brno-radar.png", png, "image/png")},
+                    timeout=60,
+                )
+                resp.raise_for_status()
+                sent = True
+                print(f"Sent photo to {cid}: {head}")
+                continue
+            except Exception as e:  # noqa: BLE001
+                print(f"Photo send to {cid} failed ({e!r}); falling back to text.")
+        try:
+            resp = requests.post(
+                f"https://api.telegram.org/bot{TOKEN}/sendMessage",
+                json={"chat_id": cid, "text": msg, "parse_mode": "Markdown"},
+                timeout=30,
+            )
+            resp.raise_for_status()
+            sent = True
+            print(f"Sent text to {cid}: {head}")
+        except Exception as e:  # noqa: BLE001
+            print(f"Failed to notify {cid}: {e!r}")
+            continue
+    return sent
+
+
+# ---- manual test send (workflow_dispatch input) ----
+# Verifies the whole path — secret → CHAT_IDS parsing → per-recipient delivery —
+# without rain detection, radar, or touching state.json (so it can't disturb the
+# dedup marker of a real rain event).
+if os.environ.get("TEST_SEND") == "true":
+    send_to_all(None, "✅ Test — Brno bot doručení OK")
+    print("Test send complete.")
+    sys.exit(0)
+
+
 # ---- fetch forecast ----
 url = (
     "https://api.open-meteo.com/v1/forecast"
@@ -137,35 +189,7 @@ except Exception as e:  # noqa: BLE001
 
 # Each chat gets its own photo attempt with a per-recipient text fallback, so
 # no one can ever receive both the photo and the text.
-sent = False
-head = msg.splitlines()[0]
-for cid in CHAT_IDS:
-    if png is not None:
-        try:
-            resp = requests.post(
-                f"https://api.telegram.org/bot{TOKEN}/sendPhoto",
-                data={"chat_id": cid, "caption": caption, "parse_mode": "Markdown"},
-                files={"photo": ("brno-radar.png", png, "image/png")},
-                timeout=60,
-            )
-            resp.raise_for_status()
-            sent = True
-            print(f"Sent photo to {cid}: {head}")
-            continue
-        except Exception as e:  # noqa: BLE001
-            print(f"Photo send to {cid} failed ({e!r}); falling back to text.")
-    try:
-        resp = requests.post(
-            f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-            json={"chat_id": cid, "text": msg, "parse_mode": "Markdown"},
-            timeout=30,
-        )
-        resp.raise_for_status()
-        sent = True
-        print(f"Sent text to {cid}: {head}")
-    except Exception as e:  # noqa: BLE001
-        print(f"Failed to notify {cid}: {e!r}")
-        continue
+sent = send_to_all(png, msg, caption)
 
 # Only mark the event as alerted once something actually went out.
 if sent:

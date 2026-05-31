@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "7,22,37,52 * * * *"   # every 15 min off-peak (UTC; avoids 00/15/30/45 spike)
   workflow_dispatch:          # allow manual run from Actions tab
+    inputs:
+      test_send:
+        description: "Send a test message to all chat IDs and exit"
+        type: boolean
+        default: false
 
 concurrency:
   group: rain-check
@@ -35,6 +40,7 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID:   ${{ secrets.TELEGRAM_CHAT_ID }}
+          TEST_SEND:          ${{ inputs.test_send }}
 
       - name: Save alert state
         if: always()
