@@ -119,8 +119,11 @@ else:
         f"První 15 min: ~{p:.1f} mm"
     )
 
-# ---- send: photo with radar, fallback to text ----
-sent = False
+# ---- send: per recipient, photo with radar, fallback to text ----
+# Build the radar once (shared by all recipients). If it can't be built,
+# png stays None and everyone gets the text-only alert.
+png = None
+caption = msg
 try:
     png, radar_ts = make_brno_radar()
     radar_dt = datetime.fromtimestamp(radar_ts, TZ)
@@ -129,27 +132,36 @@ try:
         + f"\n\n_Radar: {radar_dt.strftime('%H:%M')} · "
         "© OpenStreetMap · Weather data by Rain Viewer_"
     )
-    for cid in CHAT_IDS:
-        resp = requests.post(
-            f"https://api.telegram.org/bot{TOKEN}/sendPhoto",
-            data={"chat_id": cid, "caption": caption, "parse_mode": "Markdown"},
-            files={"photo": ("brno-radar.png", png, "image/png")},
-            timeout=60,
-        )
-        resp.raise_for_status()
-    sent = True
-    print(f"Sent photo + caption to {len(CHAT_IDS)} chat(s): {msg.splitlines()[0]}")
 except Exception as e:  # noqa: BLE001
-    print(f"Radar fetch/send failed ({e!r}); falling back to text-only.")
-    for cid in CHAT_IDS:
-        resp = requests.post(
-            f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-            json={"chat_id": cid, "text": msg, "parse_mode": "Markdown"},
-            timeout=30,
-        )
-        resp.raise_for_status()
+    print(f"Radar fetch failed ({e!r}); sending text-only to all chats.")
+
+# Each chat gets its own photo attempt with a per-recipient text fallback, so
+# no one can ever receive both the photo and the text.
+sent = False
+head = msg.splitlines()[0]
+for cid in CHAT_IDS:
+    if png is not None:
+        try:
+            resp = requests.post(
+                f"https://api.telegram.org/bot{TOKEN}/sendPhoto",
+                data={"chat_id": cid, "caption": caption, "parse_mode": "Markdown"},
+                files={"photo": ("brno-radar.png", png, "image/png")},
+                timeout=60,
+            )
+            resp.raise_for_status()
+            sent = True
+            print(f"Sent photo to {cid}: {head}")
+            continue
+        except Exception as e:  # noqa: BLE001
+            print(f"Photo send to {cid} failed ({e!r}); falling back to text.")
+    resp = requests.post(
+        f"https://api.telegram.org/bot{TOKEN}/sendMessage",
+        json={"chat_id": cid, "text": msg, "parse_mode": "Markdown"},
+        timeout=30,
+    )
+    resp.raise_for_status()
     sent = True
-    print(f"Sent to {len(CHAT_IDS)} chat(s): {msg}")
+    print(f"Sent text to {cid}: {head}")
 
 # Only mark the event as alerted once something actually went out.
 if sent:

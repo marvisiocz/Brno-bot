@@ -34,7 +34,7 @@ Free Telegram alert ~15–30 min before it rains in Brno, with a radar snapshot 
 - **Why zoom 7, 2×2 tiles, 384 px crop**: Rain Viewer free tier max is zoom 7, 512 px tiles. One tile ≈ 200 km at Brno's latitude. 2×2 = ~400 km, cropped to 384 px ≈ 150 km square centered on Brno — similar framing to ČHMÚ INCA (roughly Tábor–Hodonín east-west, Olomouc–Mikulov north-south).
 - **Why `sendPhoto` with fallback to `sendMessage`**: if Rain Viewer or OSM tile servers blip, we still want the text alert delivered. Caption carries the same payload as the old message.
 - **Brno coordinates**: 49.1951 N, 16.6068 E (city centre).
-- **`TELEGRAM_CHAT_ID` může obsahovat víc ID oddělených čárkou**; skript je rozparsuje na seznam (`CHAT_IDS`) a pošle zprávu každému zvlášť. Jeden selhavší příjemce (`raise_for_status`) přeruší běh — pokud chceš později best-effort doručení, obal POST do `try/except`.
+- **`TELEGRAM_CHAT_ID` může obsahovat víc ID oddělených čárkou**; skript je rozparsuje na seznam (`CHAT_IDS`). Radar se staví jednou a sdílí se. Každý příjemce má pak vlastní pokus o `sendPhoto` s fallbackem na `sendMessage` (text) — díky tomu nikdy nedostane fotku **i** text, ani když fotka selže až u druhého příjemce. Selhání samotného textového fallbacku (`raise_for_status`) přeruší běh.
 
 ## Tunable knobs
 
